@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800;900&display=swap');
+
+* {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Default sticker cursor: 🏷️ */
+body {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px;'><text y='24'>🏷️</text></svg>"), auto;
+  background-color: #fef08a;
+  background-image: radial-gradient(#000000 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Hover sticker cursor: 💸 */
+button, a, input, select {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px;'><text y='24'>💸</text></svg>"), pointer !important;
+}
+
+/* Custom Neubrutalist Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #fef08a;
+}
+::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 5px;
+}

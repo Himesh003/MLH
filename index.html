@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MicroSplit 🤖 - Chip's Vibe Wallet</title>
+  
+  <!-- Stylesheets & Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- React, Babel & Confetti via CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      // State Setup
+      const [activeTab, setActiveTab] = useState('personal');
+      const [timeFilter, setTimeFilter] = useState('monthly');
+      const [monthlyBudget, setMonthlyBudget] = useState(3000);
+      const [isEditingBudget, setIsEditingBudget] = useState(false);
+      const [tempBudget, setTempBudget] = useState(monthlyBudget);
+
+      // Expenses
+      const [personalExpenses, setPersonalExpenses] = useState([
+        { id: 1, title: 'Cutting Chai & Samosa', amount: 40, date: 'Today' },
+        { id: 2, title: 'Auto Rickshaw to Campus', amount: 60, date: 'Today' },
+        { id: 3, title: 'Xerox Exam Notes', amount: 120, date: 'Yesterday' },
+      ]);
+
+      const [friendDebts, setFriendDebts] = useState([
+        { id: 1, name: 'Rohan', amount: 150, item: 'Late Night Pizza', type: 'owes_you', settled: false },
+        { id: 2, name: 'Ananya', amount: 200, item: 'Movie Tickets', type: 'you_owe', settled: false },
+      ]);
+
+      // Form inputs
+      const [expTitle, setExpTitle] = useState('');
+      const [expAmount, setExpAmount] = useState('');
+      const [friendName, setFriendName] = useState('');
+      const [debtAmount, setDebtAmount] = useState('');
+      const [debtItem, setDebtItem] = useState('');
+      const [debtType, setDebtType] = useState('owes_you');
+
+      // Modal state
+      const [qrModal, setQrModal] = useState({ open: false, debt: null });
+
+      // Calculations & Mascot Reaction
+      const totalSpent = personalExpenses.reduce((sum, item) => sum + item.amount, 0);
+      const budgetPercentage = Math.min(Math.round((totalSpent / monthlyBudget) * 100), 120);
+
+      const getChipReaction = () => {
+        if (budgetPercentage < 50) return { line: "We're living like royalty! Pocket money is safe 😎", bg: "bg-emerald-300", emotion: "🤖✨" };
+        if (budgetPercentage <= 85) return { line: "Hold your horses! We're hitting the yellow zone ⚠️", bg: "bg-yellow-300", emotion: "🤖🧐" };
+        if (budgetPercentage <= 99) return { line: "Sweating heavily... one more chai and we go broke! 😰", bg: "bg-orange-300", emotion: "🤖💦" };
+        return { line: "DANGER! BUDGET OVERLOAD! NO MORE MOMOS THIS MONTH! 🚨", bg: "bg-rose-400", emotion: "🤖💥" };
+      };
+
+      const chipStatus = getChipReaction();
+
+      // Handlers
+      const handleAddExpense = (e) => {
+        e.preventDefault();
+        if (!expTitle || !expAmount) return;
+        setPersonalExpenses([{ id: Date.now(), title: expTitle, amount: parseFloat(expAmount), date: 'Just now' }, ...personalExpenses]);
+        setExpTitle('');
+        setExpAmount('');
+      };
+
+      const handleAddDebt = (e) => {
+        e.preventDefault();
+        if (!friendName || !debtAmount || !debtItem) return;
+        setFriendDebts([{ id: Date.now(), name: friendName, amount: parseFloat(debtAmount), item: debtItem, type: debtType, settled: false }, ...friendDebts]);
+        setFriendName('');
+        setDebtAmount('');
+        setDebtItem('');
+      };
+
+      const handleSettle = (id) => {
+        setFriendDebts(friendDebts.map(d => d.id === id ? { ...d, settled: true } : d));
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        setQrModal({ open: false, debt: null });
+      };
+
+      const loadDemoData = () => {
+        setPersonalExpenses([
+          { id: 101, title: 'Canteen Special Momo', amount: 120, date: 'Today' },
+          { id: 102, title: 'Auto to Metro Station', amount: 50, date: 'Today' },
+          { id: 103, title: 'Hostel Night Chai', amount: 30, date: 'Yesterday' },
+          { id: 104, title: 'Lab Record Xerox', amount: 80, date: 'Yesterday' },
+        ]);
+        setFriendDebts([
+          { id: 201, name: 'Siddharth', amount: 250, item: 'Group Dinner Split', type: 'owes_you', settled: false },
+          { id: 202, name: 'Priya', amount: 140, item: 'Concert Ticket Advance', type: 'you_owe', settled: false },
+          { id: 203, name: 'Vikram', amount: 90, item: 'Cold Coffee', type: 'owes_you', settled: true }
+        ]);
+      };
+
+      return (
+        <div className="min-h-screen p-4 md:p-8 max-w-5xl mx-auto">
+          {/* Header */}
+          <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 bg-amber-300 rounded-2xl border-4 border-black flex items-center justify-center text-3xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                🤖
+              </div>
+              <div>
+                <h1 className="text-3xl font-black tracking-tight">MicroSplit</h1>
+                <p className="text-xs font-bold text-gray-600">Powered by Chip the Wallet Mascot</p>
+              </div>
+            </div>
+
+            <button 
+              onClick={loadDemoData}
+              className="bg-purple-300 hover:bg-purple-400 text-black font-extrabold px-5 py-3 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
+            >
+              ⚡ Load Demo Pitch Data
+            </button>
+          </header>
+
+          {/* Chip Speech Bubble Banner */}
+          <div className={`mb-8 p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${chipStatus.bg} flex flex-col md:flex-row items-center gap-6`}>
+            <div className="text-5xl animate-bounce">{chipStatus.emotion}</div>
+            <div className="flex-1 text-center md:text-left">
+              <span className="inline-block bg-black text-white font-extrabold text-xs px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                Chip Says
+              </span>
+              <h2 className="text-xl md:text-2xl font-black text-black">"{chipStatus.line}"</h2>
+            </div>
+          </div>
+
+          {/* Main Tabs */}
+          <div className="flex gap-4 mb-8">
+            <button
+              onClick={() => setActiveTab('personal')}
+              className={`flex-1 py-4 font-black text-lg rounded-2xl border-4 border-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
+                activeTab === 'personal' ? 'bg-cyan-300' : 'bg-white opacity-70'
+              }`}
+            >
+              💳 Personal Wallet
+            </button>
+            <button
+              onClick={() => setActiveTab('friends')}
+              className={`flex-1 py-4 font-black text-lg rounded-2xl border-4 border-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
+                activeTab === 'friends' ? 'bg-pink-300' : 'bg-white opacity-70'
+              }`}
+            >
+              🤝 Friend Splits
+            </button>
+          </div>
+
+          {/* TAB 1: PERSONAL EXPENSES */}
+          {activeTab === 'personal' && (
+            <div className="space-y-8">
+              {/* Monthly Budget Cap & Progress Bar */}
+              <div className="bg-white p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-500">Monthly Cap</span>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-3xl font-black">₹{totalSpent} / ₹{monthlyBudget}</h3>
+                      <button 
+                        onClick={() => { setTempBudget(monthlyBudget); setIsEditingBudget(true); }}
+                        className="p-2 bg-amber-200 border-2 border-black rounded-lg hover:bg-amber-300 font-bold text-xs"
+                      >
+                        ✏️ Edit Cap
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex bg-gray-100 p-1 rounded-xl border-2 border-black gap-1">
+                    {['daily', 'weekly', 'monthly'].map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => setTimeFilter(v)}
+                        className={`px-3 py-1 text-xs font-black rounded-lg capitalize ${
+                          timeFilter === v ? 'bg-black text-white' : 'text-gray-700'
+                        }`}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-full bg-gray-200 h-8 rounded-xl border-4 border-black overflow-hidden relative p-1">
+                  <div 
+                    className={`h-full rounded-lg transition-all duration-500 ${
+                      budgetPercentage > 100 ? 'bg-rose-500 animate-pulse' :
+                      budgetPercentage > 85 ? 'bg-orange-400' :
+                      budgetPercentage > 50 ? 'bg-yellow-300' : 'bg-emerald-400'
+                    }`}
+                    style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center font-black text-xs text-black">
+                    {budgetPercentage}% Budget Used
+                  </span>
+                </div>
+              </div>
+
+              {/* Form & List */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <form onSubmit={handleAddExpense} className="bg-amber-100 p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4">
+                  <h3 className="text-xl font-black">➕ Add Expense</h3>
+                  <div>
+                    <label className="text-xs font-bold uppercase block mb-1">Expense Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Chai, Momo, Auto..."
+                      value={expTitle}
+                      onChange={(e) => setExpTitle(e.target.value)}
+                      className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase block mb-1">Amount (₹)</label>
+                    <input 
+                      type="number" 
+                      placeholder="e.g. 50"
+                      value={expAmount}
+                      onChange={(e) => setExpAmount(e.target.value)}
+                      className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none"
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-black text-white font-black py-4 rounded-xl border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_0px_rgba(255,255,255,1)]">
+                    Log Spending 💸
+                  </button>
+                </form>
+
+                <div className="md:col-span-2 space-y-3">
+                  <h3 className="text-xl font-black mb-4">Recent Spending</h3>
+                  {personalExpenses.map((exp) => (
+                    <div key={exp.id} className="bg-white p-4 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-yellow-200 border-2 border-black rounded-xl flex items-center justify-center text-xl font-black">
+                          {exp.title.toLowerCase().includes('chai') ? '☕' : exp.title.toLowerCase().includes('auto') ? '🛺' : exp.title.toLowerCase().includes('xerox') ? '📄' : '🥟'}
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-base">{exp.title}</h4>
+                          <p className="text-xs font-bold text-gray-500">{exp.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-black text-lg">₹{exp.amount}</span>
+                        <button onClick={() => setPersonalExpenses(personalExpenses.filter(i => i.id !== exp.id))} className="text-rose-500 font-black">
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: FRIEND SPLITS */}
+          {activeTab === 'friends' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <form onSubmit={handleAddDebt} className="bg-pink-100 p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4">
+                <h3 className="text-xl font-black">🤝 Split Expense</h3>
+                <div>
+                  <label className="text-xs font-bold uppercase block mb-1">Friend's Name</label>
+                  <input type="text" placeholder="e.g. Rohan" value={friendName} onChange={(e) => setFriendName(e.target.value)} className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase block mb-1">For What?</label>
+                  <input type="text" placeholder="Movie, Pizza..." value={debtItem} onChange={(e) => setDebtItem(e.target.value)} className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase block mb-1">Amount (₹)</label>
+                  <input type="number" placeholder="150" value={debtAmount} onChange={(e) => setDebtAmount(e.target.value)} className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase block mb-1">Direction</label>
+                  <select value={debtType} onChange={(e) => setDebtType(e.target.value)} className="w-full p-3 font-bold rounded-xl border-2 border-black focus:outline-none bg-white">
+                    <option value="owes_you">They owe me money</option>
+                    <option value="you_owe">I owe them money</option>
+                  </select>
+                </div>
+                <button type="submit" className="w-full bg-black text-white font-black py-4 rounded-xl border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_0px_rgba(255,255,255,1)]">
+                  Add Debt Tag 🏷️
+                </button>
+              </form>
+
+              <div className="md:col-span-2 space-y-4">
+                <h3 className="text-xl font-black">Active Debt Ledger</h3>
+                {friendDebts.map((debt) => (
+                  <div key={debt.id} className={`p-5 rounded-3xl border-4 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between ${
+                    debt.settled ? 'bg-gray-100 opacity-60' : debt.type === 'owes_you' ? 'bg-emerald-100' : 'bg-rose-100'
+                  }`}>
+                    <div>
+                      <h4 className="font-extrabold text-lg">{debt.name}</h4>
+                      <p className="text-xs font-bold text-gray-600">{debt.item}</p>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded border border-black bg-white inline-block mt-1">
+                        {debt.type === 'owes_you' ? 'Owes You' : 'You Owe'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <span className="font-black text-2xl">₹{debt.amount}</span>
+                      {debt.settled ? (
+                        <span className="font-black text-xs text-emerald-700 bg-emerald-200 px-3 py-2 rounded-xl border-2 border-black">
+                          ✅ Settled
+                        </span>
+                      ) : (
+                        <button onClick={() => setQrModal({ open: true, debt })} className="bg-white font-black text-xs px-4 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-amber-200">
+                          📱 Pay / Settle
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* EDIT BUDGET MODAL */}
+          {isEditingBudget && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white p-6 rounded-3xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full space-y-4">
+                <h3 className="font-black text-xl">Set Monthly Limit</h3>
+                <input type="number" value={tempBudget} onChange={(e) => setTempBudget(Number(e.target.value))} className="w-full p-3 font-bold text-xl rounded-xl border-2 border-black" />
+                <button onClick={() => { setMonthlyBudget(tempBudget); setIsEditingBudget(false); }} className="w-full bg-amber-300 font-black py-3 rounded-xl border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                  Save Cap 🎯
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* QR MODAL */}
+          {qrModal.open && qrModal.debt && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+              <div className="bg-yellow-200 p-8 rounded-3xl border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full text-center space-y-6 relative">
+                <button onClick={() => setQrModal({ open: false, debt: null })} className="absolute top-4 right-4 p-1 bg-white border-2 border-black rounded-lg font-black">✕</button>
+                <h3 className="font-black text-2xl">Settle with {qrModal.debt.name}</h3>
+                <p className="font-bold text-sm text-gray-700">Amount: ₹{qrModal.debt.amount} for {qrModal.debt.item}</p>
+                <div className="bg-white p-4 rounded-2xl border-4 border-black inline-block shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=chipwallet@upi&pn=${qrModal.debt.name}&am=${qrModal.debt.amount}`} alt="Payment QR" className="w-44 h-44 mx-auto" />
+                </div>
+                <button onClick={() => handleSettle(qrModal.debt.id)} className="w-full bg-emerald-400 text-black font-black py-4 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-lg hover:bg-emerald-500">
+                  Mark Paid & Pop Confetti! 🎉
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

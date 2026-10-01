@@ -2,360 +2,1342 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MicroSplit 🤖 - Chip's Vibe Wallet</title>
-  
-  <!-- Stylesheets & Fonts -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chip's Vibe Wallet & Ledger</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- React, Babel & Confetti via CDN -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-</head>
-<body>
-  <div id="root"></div>
-
-  <script type="text/babel">
-    const { useState } = React;
-
-    function App() {
-      // State Setup
-      const [activeTab, setActiveTab] = useState('personal');
-      const [timeFilter, setTimeFilter] = useState('monthly');
-      const [monthlyBudget, setMonthlyBudget] = useState(3000);
-      const [isEditingBudget, setIsEditingBudget] = useState(false);
-      const [tempBudget, setTempBudget] = useState(monthlyBudget);
-
-      // Expenses
-      const [personalExpenses, setPersonalExpenses] = useState([
-        { id: 1, title: 'Cutting Chai & Samosa', amount: 40, date: 'Today' },
-        { id: 2, title: 'Auto Rickshaw to Campus', amount: 60, date: 'Today' },
-        { id: 3, title: 'Xerox Exam Notes', amount: 120, date: 'Yesterday' },
-      ]);
-
-      const [friendDebts, setFriendDebts] = useState([
-        { id: 1, name: 'Rohan', amount: 150, item: 'Late Night Pizza', type: 'owes_you', settled: false },
-        { id: 2, name: 'Ananya', amount: 200, item: 'Movie Tickets', type: 'you_owe', settled: false },
-      ]);
-
-      // Form inputs
-      const [expTitle, setExpTitle] = useState('');
-      const [expAmount, setExpAmount] = useState('');
-      const [friendName, setFriendName] = useState('');
-      const [debtAmount, setDebtAmount] = useState('');
-      const [debtItem, setDebtItem] = useState('');
-      const [debtType, setDebtType] = useState('owes_you');
-
-      // Modal state
-      const [qrModal, setQrModal] = useState({ open: false, debt: null });
-
-      // Calculations & Mascot Reaction
-      const totalSpent = personalExpenses.reduce((sum, item) => sum + item.amount, 0);
-      const budgetPercentage = Math.min(Math.round((totalSpent / monthlyBudget) * 100), 120);
-
-      const getChipReaction = () => {
-        if (budgetPercentage < 50) return { line: "We're living like royalty! Pocket money is safe 😎", bg: "bg-emerald-300", emotion: "🤖✨" };
-        if (budgetPercentage <= 85) return { line: "Hold your horses! We're hitting the yellow zone ⚠️", bg: "bg-yellow-300", emotion: "🤖🧐" };
-        if (budgetPercentage <= 99) return { line: "Sweating heavily... one more chai and we go broke! 😰", bg: "bg-orange-300", emotion: "🤖💦" };
-        return { line: "DANGER! BUDGET OVERLOAD! NO MORE MOMOS THIS MONTH! 🚨", bg: "bg-rose-400", emotion: "🤖💥" };
-      };
-
-      const chipStatus = getChipReaction();
-
-      // Handlers
-      const handleAddExpense = (e) => {
-        e.preventDefault();
-        if (!expTitle || !expAmount) return;
-        setPersonalExpenses([{ id: Date.now(), title: expTitle, amount: parseFloat(expAmount), date: 'Just now' }, ...personalExpenses]);
-        setExpTitle('');
-        setExpAmount('');
-      };
-
-      const handleAddDebt = (e) => {
-        e.preventDefault();
-        if (!friendName || !debtAmount || !debtItem) return;
-        setFriendDebts([{ id: Date.now(), name: friendName, amount: parseFloat(debtAmount), item: debtItem, type: debtType, settled: false }, ...friendDebts]);
-        setFriendName('');
-        setDebtAmount('');
-        setDebtItem('');
-      };
-
-      const handleSettle = (id) => {
-        setFriendDebts(friendDebts.map(d => d.id === id ? { ...d, settled: true } : d));
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        setQrModal({ open: false, debt: null });
-      };
-
-      const loadDemoData = () => {
-        setPersonalExpenses([
-          { id: 101, title: 'Canteen Special Momo', amount: 120, date: 'Today' },
-          { id: 102, title: 'Auto to Metro Station', amount: 50, date: 'Today' },
-          { id: 103, title: 'Hostel Night Chai', amount: 30, date: 'Yesterday' },
-          { id: 104, title: 'Lab Record Xerox', amount: 80, date: 'Yesterday' },
-        ]);
-        setFriendDebts([
-          { id: 201, name: 'Siddharth', amount: 250, item: 'Group Dinner Split', type: 'owes_you', settled: false },
-          { id: 202, name: 'Priya', amount: 140, item: 'Concert Ticket Advance', type: 'you_owe', settled: false },
-          { id: 203, name: 'Vikram', amount: 90, item: 'Cold Coffee', type: 'owes_you', settled: true }
-        ]);
-      };
-
-      return (
-        <div className="min-h-screen p-4 md:p-8 max-w-5xl mx-auto">
-          {/* Header */}
-          <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 bg-amber-300 rounded-2xl border-4 border-black flex items-center justify-center text-3xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                🤖
-              </div>
-              <div>
-                <h1 className="text-3xl font-black tracking-tight">MicroSplit</h1>
-                <p className="text-xs font-bold text-gray-600">Powered by Chip the Wallet Mascot</p>
-              </div>
-            </div>
-
-            <button 
-              onClick={loadDemoData}
-              className="bg-purple-300 hover:bg-purple-400 text-black font-extrabold px-5 py-3 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
-            >
-              ⚡ Load Demo Pitch Data
-            </button>
-          </header>
-
-          {/* Chip Speech Bubble Banner */}
-          <div className={`mb-8 p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${chipStatus.bg} flex flex-col md:flex-row items-center gap-6`}>
-            <div className="text-5xl animate-bounce">{chipStatus.emotion}</div>
-            <div className="flex-1 text-center md:text-left">
-              <span className="inline-block bg-black text-white font-extrabold text-xs px-3 py-1 rounded-full uppercase tracking-wider mb-2">
-                Chip Says
-              </span>
-              <h2 className="text-xl md:text-2xl font-black text-black">"{chipStatus.line}"</h2>
-            </div>
-          </div>
-
-          {/* Main Tabs */}
-          <div className="flex gap-4 mb-8">
-            <button
-              onClick={() => setActiveTab('personal')}
-              className={`flex-1 py-4 font-black text-lg rounded-2xl border-4 border-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
-                activeTab === 'personal' ? 'bg-cyan-300' : 'bg-white opacity-70'
-              }`}
-            >
-              💳 Personal Wallet
-            </button>
-            <button
-              onClick={() => setActiveTab('friends')}
-              className={`flex-1 py-4 font-black text-lg rounded-2xl border-4 border-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
-                activeTab === 'friends' ? 'bg-pink-300' : 'bg-white opacity-70'
-              }`}
-            >
-              🤝 Friend Splits
-            </button>
-          </div>
-
-          {/* TAB 1: PERSONAL EXPENSES */}
-          {activeTab === 'personal' && (
-            <div className="space-y-8">
-              {/* Monthly Budget Cap & Progress Bar */}
-              <div className="bg-white p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-gray-500">Monthly Cap</span>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-3xl font-black">₹{totalSpent} / ₹{monthlyBudget}</h3>
-                      <button 
-                        onClick={() => { setTempBudget(monthlyBudget); setIsEditingBudget(true); }}
-                        className="p-2 bg-amber-200 border-2 border-black rounded-lg hover:bg-amber-300 font-bold text-xs"
-                      >
-                        ✏️ Edit Cap
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex bg-gray-100 p-1 rounded-xl border-2 border-black gap-1">
-                    {['daily', 'weekly', 'monthly'].map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => setTimeFilter(v)}
-                        className={`px-3 py-1 text-xs font-black rounded-lg capitalize ${
-                          timeFilter === v ? 'bg-black text-white' : 'text-gray-700'
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="w-full bg-gray-200 h-8 rounded-xl border-4 border-black overflow-hidden relative p-1">
-                  <div 
-                    className={`h-full rounded-lg transition-all duration-500 ${
-                      budgetPercentage > 100 ? 'bg-rose-500 animate-pulse' :
-                      budgetPercentage > 85 ? 'bg-orange-400' :
-                      budgetPercentage > 50 ? 'bg-yellow-300' : 'bg-emerald-400'
-                    }`}
-                    style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
-                  />
-                  <span className="absolute inset-0 flex items-center justify-center font-black text-xs text-black">
-                    {budgetPercentage}% Budget Used
-                  </span>
-                </div>
-              </div>
-
-              {/* Form & List */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <form onSubmit={handleAddExpense} className="bg-amber-100 p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4">
-                  <h3 className="text-xl font-black">➕ Add Expense</h3>
-                  <div>
-                    <label className="text-xs font-bold uppercase block mb-1">Expense Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Chai, Momo, Auto..."
-                      value={expTitle}
-                      onChange={(e) => setExpTitle(e.target.value)}
-                      className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold uppercase block mb-1">Amount (₹)</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g. 50"
-                      value={expAmount}
-                      onChange={(e) => setExpAmount(e.target.value)}
-                      className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none"
-                    />
-                  </div>
-                  <button type="submit" className="w-full bg-black text-white font-black py-4 rounded-xl border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_0px_rgba(255,255,255,1)]">
-                    Log Spending 💸
-                  </button>
-                </form>
-
-                <div className="md:col-span-2 space-y-3">
-                  <h3 className="text-xl font-black mb-4">Recent Spending</h3>
-                  {personalExpenses.map((exp) => (
-                    <div key={exp.id} className="bg-white p-4 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-yellow-200 border-2 border-black rounded-xl flex items-center justify-center text-xl font-black">
-                          {exp.title.toLowerCase().includes('chai') ? '☕' : exp.title.toLowerCase().includes('auto') ? '🛺' : exp.title.toLowerCase().includes('xerox') ? '📄' : '🥟'}
-                        </div>
-                        <div>
-                          <h4 className="font-extrabold text-base">{exp.title}</h4>
-                          <p className="text-xs font-bold text-gray-500">{exp.date}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-black text-lg">₹{exp.amount}</span>
-                        <button onClick={() => setPersonalExpenses(personalExpenses.filter(i => i.id !== exp.id))} className="text-rose-500 font-black">
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: FRIEND SPLITS */}
-          {activeTab === 'friends' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <form onSubmit={handleAddDebt} className="bg-pink-100 p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4">
-                <h3 className="text-xl font-black">🤝 Split Expense</h3>
-                <div>
-                  <label className="text-xs font-bold uppercase block mb-1">Friend's Name</label>
-                  <input type="text" placeholder="e.g. Rohan" value={friendName} onChange={(e) => setFriendName(e.target.value)} className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase block mb-1">For What?</label>
-                  <input type="text" placeholder="Movie, Pizza..." value={debtItem} onChange={(e) => setDebtItem(e.target.value)} className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase block mb-1">Amount (₹)</label>
-                  <input type="number" placeholder="150" value={debtAmount} onChange={(e) => setDebtAmount(e.target.value)} className="w-full p-3 font-semibold rounded-xl border-2 border-black focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase block mb-1">Direction</label>
-                  <select value={debtType} onChange={(e) => setDebtType(e.target.value)} className="w-full p-3 font-bold rounded-xl border-2 border-black focus:outline-none bg-white">
-                    <option value="owes_you">They owe me money</option>
-                    <option value="you_owe">I owe them money</option>
-                  </select>
-                </div>
-                <button type="submit" className="w-full bg-black text-white font-black py-4 rounded-xl border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_0px_rgba(255,255,255,1)]">
-                  Add Debt Tag 🏷️
-                </button>
-              </form>
-
-              <div className="md:col-span-2 space-y-4">
-                <h3 className="text-xl font-black">Active Debt Ledger</h3>
-                {friendDebts.map((debt) => (
-                  <div key={debt.id} className={`p-5 rounded-3xl border-4 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between ${
-                    debt.settled ? 'bg-gray-100 opacity-60' : debt.type === 'owes_you' ? 'bg-emerald-100' : 'bg-rose-100'
-                  }`}>
-                    <div>
-                      <h4 className="font-extrabold text-lg">{debt.name}</h4>
-                      <p className="text-xs font-bold text-gray-600">{debt.item}</p>
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded border border-black bg-white inline-block mt-1">
-                        {debt.type === 'owes_you' ? 'Owes You' : 'You Owe'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <span className="font-black text-2xl">₹{debt.amount}</span>
-                      {debt.settled ? (
-                        <span className="font-black text-xs text-emerald-700 bg-emerald-200 px-3 py-2 rounded-xl border-2 border-black">
-                          ✅ Settled
-                        </span>
-                      ) : (
-                        <button onClick={() => setQrModal({ open: true, debt })} className="bg-white font-black text-xs px-4 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-amber-200">
-                          📱 Pay / Settle
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* EDIT BUDGET MODAL */}
-          {isEditingBudget && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white p-6 rounded-3xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full space-y-4">
-                <h3 className="font-black text-xl">Set Monthly Limit</h3>
-                <input type="number" value={tempBudget} onChange={(e) => setTempBudget(Number(e.target.value))} className="w-full p-3 font-bold text-xl rounded-xl border-2 border-black" />
-                <button onClick={() => { setMonthlyBudget(tempBudget); setIsEditingBudget(false); }} className="w-full bg-amber-300 font-black py-3 rounded-xl border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                  Save Cap 🎯
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* QR MODAL */}
-          {qrModal.open && qrModal.debt && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-              <div className="bg-yellow-200 p-8 rounded-3xl border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full text-center space-y-6 relative">
-                <button onClick={() => setQrModal({ open: false, debt: null })} className="absolute top-4 right-4 p-1 bg-white border-2 border-black rounded-lg font-black">✕</button>
-                <h3 className="font-black text-2xl">Settle with {qrModal.debt.name}</h3>
-                <p className="font-bold text-sm text-gray-700">Amount: ₹{qrModal.debt.amount} for {qrModal.debt.item}</p>
-                <div className="bg-white p-4 rounded-2xl border-4 border-black inline-block shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=chipwallet@upi&pn=${qrModal.debt.name}&am=${qrModal.debt.amount}`} alt="Payment QR" className="w-44 h-44 mx-auto" />
-                </div>
-                <button onClick={() => handleSettle(qrModal.debt.id)} className="w-full bg-emerald-400 text-black font-black py-4 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-lg hover:bg-emerald-500">
-                  Mark Paid & Pop Confetti! 🎉
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      );
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    body {
+      background-color: #fef08a;
+      padding: 24px 16px;
+      color: #000;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 3px solid #000000;
+      border-radius: 16px;
+      box-shadow: 4px 4px 0px #000000;
+      padding: 16px;
+    }
+
+    .project-title-container {
+      background: #ffffff;
+      border: 3px solid #000000;
+      box-shadow: 4px 4px 0px #000000;
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      font-size: 30px;
+    }
+
+    .brand-title {
+      font-weight: 900;
+      font-size: 21px;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: #555;
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      background: #e0e7ff;
+      border: 2px solid #000;
+      border-radius: 12px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 2px 2px 0px #000;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.1s ease;
+    }
+
+    .action-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px #000;
+    }
+
+    .action-btn.danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 4px;
+      border: 3px solid #000;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 3px 3px 0px #000;
+      text-align: center;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tab-btn.active-personal { background: #67e8f9; }
+    .tab-btn.active-friends { background: #fef08a; }
+    .tab-btn.active-secret { background: #fca5a5; color: #991b1b; }
+    .tab-btn.inactive { background: #ffffff; color: #555; }
+
+    .robot-card {
+      background: #fbcfe8;
+      position: relative;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    .robot-card.secret-bg {
+      background: #fecaca;
+    }
+
+    .robot-tag {
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      background: #fff;
+      border: 2px solid #000;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 10px;
+      box-shadow: 2px 2px 0px #000;
+      z-index: 2;
+    }
+
+    .robot-radar-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .robot-3d-wrapper {
+      width: 150px;
+      height: 180px;
+      flex-shrink: 0;
+      position: relative;
+      animation: hoverFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes hoverFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .robot-bubble {
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 14px;
+      padding: 14px;
+      flex: 1;
+      text-align: left;
+      box-shadow: 3px 3px 0px #000;
+      position: relative;
+    }
+    
+    .robot-bubble::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 40%;
+      border-width: 6px 12px 6px 0;
+      border-style: solid;
+      border-color: transparent #000 transparent transparent;
+    }
+
+    .robot-label {
+      font-size: 10px;
+      font-weight: bold;
+      background: #000;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .robot-statement {
+      font-weight: 900;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+
+    .cap-header {
+      font-size: 11px;
+      font-weight: 800;
+      color: #666;
+      letter-spacing: 0.5px;
+    }
+
+    .cap-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .cap-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cap-amount {
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .edit-btn {
+      background: #fef08a;
+      border: 2px solid #000;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 2px 2px 0px #000;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .period-selector {
+      display: flex;
+      border: 2px solid #000;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f3f4f6;
+    }
+
+    .period-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .period-btn.active {
+      background: #000;
+      color: #fff;
+    }
+
+    .progress-outer {
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 20px;
+      height: 24px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-inner {
+      background: #ff4757;
+      height: 100%;
+      width: 0%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 11px;
+      transition: width 0.3s ease;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 620px) {
+      .grid { grid-template-columns: 1fr; }
+      .robot-radar-container { flex-direction: column; text-align: center; }
+      .robot-bubble::before { display: none; }
+    }
+
+    .section-title {
+      font-weight: 900;
+      font-size: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    .input-label {
+      font-size: 10px;
+      font-weight: 800;
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .input-field, .select-field {
+      width: 100%;
+      border: 2px solid #000;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 2px 2px 0px #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .split-type-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .split-type-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      background: #f3f4f6;
+      box-shadow: 2px 2px 0px #000;
+      text-align: center;
+    }
+
+    .split-type-btn.active-owed-to-me {
+      background: #bbf7d0;
+      color: #15803d;
+    }
+
+    .split-type-btn.active-owed-by-me {
+      background: #fecaca;
+      color: #b91c1c;
+    }
+
+    .split-summary-box {
+      background: #f8fafc;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-item {
+      text-align: center;
+    }
+
+    .summary-val {
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .summary-lbl {
+      font-size: 9px;
+      font-weight: 800;
+      color: #555;
+    }
+
+    .expense-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .expense-item {
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 2px 2px 0px #000;
+    }
+
+    .exp-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .exp-icon {
+      background: #fef08a;
+      border: 1px solid #000;
+      border-radius: 6px;
+      padding: 6px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+    }
+
+    .exp-title {
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .exp-date {
+      font-size: 10px;
+      color: #666;
+    }
+
+    .exp-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .exp-amount {
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .delete-btn, .settle-btn {
+      border: 2px solid #000;
+      background: #f3f4f6;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 6px;
+      box-shadow: 1px 1px 0px #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .delete-btn:hover { background: #fee2e2; color: #991b1b; }
+    .settle-btn:hover { background: #bbf7d0; color: #15803d; }
+
+    .balance-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1.5px solid #000;
+    }
+
+    .owe-positive { background: #bbf7d0; color: #15803d; }
+    .owe-negative { background: #fecaca; color: #b91c1c; }
+
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #000;
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 2px solid #fff;
+      box-shadow: 4px 4px 0px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease, fadeOut 0.3s ease 1.7s forwards;
+      pointer-events: auto;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(-10px); }
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 8888;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 16px;
+      box-shadow: 6px 6px 0px #000;
+      max-width: 400px;
+      width: 100%;
+      padding: 24px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Clear All Confirmation Modal -->
+  <div id="clear-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div style="font-size: 32px; margin-bottom: 8px;">⚠</div>
+      <div style="font-weight: 900; font-size: 18px; margin-bottom: 8px;">Clear All Data?</div>
+      <div style="font-size: 13px; color: #555; margin-bottom: 20px;">This will permanently wipe all your expenses, split ledgers, and custom caps. Are you sure?</div>
+      <div style="display: flex; gap: 12px;">
+        <button class="action-btn" style="flex:1; justify-content:center; padding:10px; background:#f3f4f6;" onclick="closeClearModal()">Cancel</button>
+        <button class="action-btn danger" style="flex:1; justify-content:center; padding:10px;" onclick="confirmClearAll()">Yes, Wipe Everything</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for JSON import -->
+  <input type="file" id="import-file-input" accept=".json" style="display: none;" onchange="handleFileImport(event)" />
+
+  <div class="container">
+    <div class="project-title-container">
+      <div class="brand">
+        <span class="logo-icon">🤖</span>
+        <div>
+          <div class="brand-title">Chip's Vibe Wallet & Ledger</div>
+          <div class="brand-sub">Your Smart Daily Expense & Budget Tracker</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn" onclick="exportData()" title="Export JSON">
+          <i data-lucide="download" style="width:14px; height:14px;"></i> Export
+        </button>
+        <button class="action-btn" onclick="triggerImport()" title="Import JSON">
+          <i data-lucide="upload" style="width:14px; height:14px;"></i> Import
+        </button>
+        <button class="action-btn" onclick="loadDemoData()" title="Reload Demo">
+          <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Demo
+        </button>
+        <button class="action-btn danger" onclick="openClearModal()" title="Clear All Data">
+          <i data-lucide="trash-2" style="width:14px; height:14px;"></i> Clear
+        </button>
+      </div>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="mode-tabs">
+      <button id="tab-personal" class="tab-btn active-personal" onclick="switchMainTab('personal')">
+        <i data-lucide="wallet" style="width:16px; height:16px;"></i> Personal Wallet
+      </button>
+      <button id="tab-friends" class="tab-btn inactive" onclick="switchMainTab('friends')">
+        <i data-lucide="users" style="width:16px; height:16px;"></i> Friend Splits
+      </button>
+      <button id="tab-secret" class="tab-btn inactive" onclick="switchMainTab('secret')">
+        <i data-lucide="lock" style="width:16px; height:16px;"></i> Secret
+      </button>
+    </div>
+
+    <div id="view-personal" style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="card robot-card">
+        <div class="robot-tag">CHIP'S LIVE RADAR ⭐</div>
+        <div class="robot-radar-container">
+          <div class="robot-3d-wrapper">
+            <svg viewBox="0 0 160 200" width="100%" height="100%" style="overflow: visible;">
+              <defs>
+                <radialGradient id="metalHead" cx="30%" cy="30%" r="70%">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="40%" stop-color="#e2e8f0"/>
+                  <stop offset="85%" stop-color="#94a3b8"/>
+                  <stop offset="100%" stop-color="#475569"/>
+                </radialGradient>
+                <radialGradient id="metalBody" cx="35%" cy="30%" r="75%">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="50%" stop-color="#cbd5e1"/>
+                  <stop offset="90%" stop-color="#64748b"/>
+                  <stop offset="100%" stop-color="#334155"/>
+                </radialGradient>
+                <linearGradient id="visorGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#0f172a"/>
+                  <stop offset="50%" stop-color="#1e293b"/>
+                  <stop offset="100%" stop-color="#020617"/>
+                </linearGradient>
+                <radialGradient id="coreNormal" cx="35%" cy="35%" r="65%">
+                  <stop offset="0%" stop-color="#a5f3fc"/>
+                  <stop offset="50%" stop-color="#06b6d4"/>
+                  <stop offset="100%" stop-color="#083344"/>
+                </radialGradient>
+                <radialGradient id="coreOverload" cx="35%" cy="35%" r="65%">
+                  <stop offset="0%" stop-color="#fecdd3"/>
+                  <stop offset="50%" stop-color="#f43f5e"/>
+                  <stop offset="100%" stop-color="#881337"/>
+                </radialGradient>
+              </defs>
+
+              <ellipse cx="80" cy="190" rx="42" ry="7" fill="#000" opacity="0.18"/>
+              <rect x="52" y="145" width="16" height="30" rx="8" fill="url(#metalBody)" stroke="#000" stroke-width="2.5"/>
+              <ellipse cx="60" cy="178" rx="14" ry="7" fill="url(#metalHead)" stroke="#000" stroke-width="2.5"/>
+              <rect x="92" y="145" width="16" height="30" rx="8" fill="url(#metalBody)" stroke="#000" stroke-width="2.5"/>
+              <ellipse cx="100" cy="178" rx="14" ry="7" fill="url(#metalHead)" stroke="#000" stroke-width="2.5"/>
+
+              <path d="M 38 95 Q 20 115 30 135" fill="none" stroke="url(#metalBody)" stroke-width="14" stroke-linecap="round"/>
+              <path d="M 38 95 Q 20 115 30 135" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="30" cy="135" r="8" fill="url(#metalHead)" stroke="#000" stroke-width="2"/>
+              <path d="M 122 95 Q 145 80 135 60" fill="none" stroke="url(#metalBody)" stroke-width="14" stroke-linecap="round"/>
+              <path d="M 122 95 Q 145 80 135 60" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="135" cy="60" r="8" fill="url(#metalHead)" stroke="#000" stroke-width="2"/>
+
+              <rect x="42" y="80" width="76" height="70" rx="20" fill="url(#metalBody)" stroke="#000" stroke-width="3"/>
+              <circle id="robot-core" cx="80" cy="112" r="15" fill="url(#coreNormal)" stroke="#000" stroke-width="2.5"/>
+              <rect x="70" y="68" width="20" height="14" rx="4" fill="#334155" stroke="#000" stroke-width="2"/>
+
+              <line x1="80" y1="28" x2="80" y2="10" stroke="#000" stroke-width="3"/>
+              <circle id="robot-antenna" cx="80" cy="8" r="6" fill="#38bdf8" stroke="#000" stroke-width="2"/>
+
+              <rect x="44" y="24" width="72" height="48" rx="16" fill="url(#metalHead)" stroke="#000" stroke-width="3"/>
+              <rect x="52" y="32" width="56" height="32" rx="10" fill="url(#visorGlass)" stroke="#000" stroke-width="2"/>
+
+              <g id="robot-face-eyes">
+                <circle cx="68" cy="48" r="5" fill="#38bdf8"/>
+                <circle cx="92" cy="48" r="5" fill="#38bdf8"/>
+                <circle cx="69" cy="46" r="2" fill="#fff"/>
+                <circle cx="93" cy="46" r="2" fill="#fff"/>
+              </g>
+            </svg>
+          </div>
+
+          <div class="robot-bubble">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span class="robot-label">CHIP'S STATEMENT</span> 
+              <span id="period-tag" style="font-size:9px; font-weight:800; color:#666;">WEEKLY RADAR</span>
+            </div>
+            <div id="robot-statement" class="robot-statement">"VIBES ARE CLEAN! BUDGET LOOKS HEALTHY SO FAR." ✨</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="cap-heading" class="cap-header">WEEKLY SPENDING CAP</div>
+        <div class="cap-body">
+          <div class="cap-left">
+            <span id="cap-ratio" class="cap-amount">₹220 / ₹200</span>
+            <button class="edit-btn" onclick="editCurrentCap()">
+              <i data-lucide="edit-3" style="width:12px; height:12px;"></i> Edit Cap
+            </button>
+          </div>
+          <div class="period-selector">
+            <button id="btn-daily" class="period-btn" onclick="setPeriod('daily')">Daily</button>
+            <button id="btn-weekly" class="period-btn active" onclick="setPeriod('weekly')">Weekly</button>
+            <button id="btn-monthly" class="period-btn" onclick="setPeriod('monthly')">Monthly</button>
+          </div>
+        </div>
+        <div class="progress-outer">
+          <div id="cap-progress-bar" class="progress-inner">110% Budget Used</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="section-title">
+            <span><i data-lucide="plus-circle" style="width:16px; height:16px; display:inline; vertical-align:middle;"></i> Add Expense</span>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Item Title</label>
+            <input id="exp-title" type="text" class="input-field" placeholder="Chai, Pizza, Auto..." />
+          </div>
+          <div class="input-group">
+            <label class="input-label">Amount (₹)</label>
+            <input id="exp-amount" type="number" class="input-field" placeholder="50" />
+          </div>
+          <div class="input-group">
+            <label class="input-label">Category / Icon</label>
+            <select id="exp-icon" class="select-field">
+              <option value="utensils">🍕 Food & Snacks</option>
+              <option value="coffee">☕ Drinks & Chai</option>
+              <option value="car">🛺 Commute / Auto</option>
+              <option value="book-open">📄 Books & Notes</option>
+              <option value="film">🎬 Entertainment</option>
+              <option value="zap">⚡ Bills & Utilities</option>
+              <option value="shopping-bag">🛍️ Shopping & Other</option>
+            </select>
+          </div>
+          <button class="submit-btn" onclick="handleAddExpense()">
+            <i data-lucide="check" style="width:16px; height:16px;"></i> Log Spending 💸
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <span>Recent Spending</span>
+            <span id="exp-count" style="font-size:11px; color:#666;">0 items</span>
+          </div>
+          <div id="expense-list" class="expense-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-friends" style="display: none; flex-direction: column; gap: 16px;">
+      <div class="grid">
+        <div class="card">
+          <div class="section-title">
+            <span><i data-lucide="users" style="width:16px; height:16px; display:inline; vertical-align:middle;"></i> Add Group Split</span>
+          </div>
+          
+          <div class="split-type-toggle">
+            <button id="split-mode-owed" class="split-type-btn active-owed-to-me" onclick="setSplitMode('owed')">💚 Owed TO Me (+)</button>
+            <button id="split-mode-owe" class="split-type-btn" onclick="setSplitMode('owe')">❤️ Owed BY Me (-)</button>
+          </div>
+
+          <div class="split-summary-box">
+            <div class="summary-item">
+              <div id="sum-to-me" class="summary-val" style="color: #15803d;">+₹0</div>
+              <div class="summary-lbl">They Owe You</div>
+            </div>
+            <div style="border-left: 2px solid #000; height: 24px;"></div>
+            <div class="summary-item">
+              <div id="sum-by-me" class="summary-val" style="color: #b91c1c;">-₹0</div>
+              <div class="summary-lbl">You Owe Them</div>
+            </div>
+            <div style="border-left: 2px solid #000; height: 24px;"></div>
+            <div class="summary-item">
+              <div id="sum-net" class="summary-val">₹0</div>
+              <div class="summary-lbl">Net Balance</div>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Friend's Name</label>
+            <input id="split-friend" type="text" class="input-field" placeholder="e.g. Aman, Riya" />
+          </div>
+          <div class="input-group">
+            <label class="input-label">Description</label>
+            <input id="split-desc" type="text" class="input-field" placeholder="e.g. Pizza Party, Cab Fare" />
+          </div>
+          <div class="input-group">
+            <label class="input-label">Share (₹)</label>
+            <input id="split-amount" type="number" class="input-field" placeholder="180" />
+          </div>
+
+          <button id="split-submit-btn" class="submit-btn" style="background:#15803d;" onclick="handleAddSplit()">
+            <i data-lucide="user-plus" style="width:16px; height:16px;"></i> Request Split 🤝
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Friend Balances & Ledger</div>
+          <div id="splits-list" class="expense-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-secret" style="display: none; flex-direction: column; gap: 16px;">
+      <div class="card robot-card secret-bg" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; gap: 16px;">
+        <div style="background: #fff; border: 3px solid #000; border-radius: 12px; padding: 6px 14px; font-weight: 900; font-size: 13px; box-shadow: 3px 3px 0px #000; position: relative;">
+          PAY MY MONEY!! 😡💸
+          <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #000;"></div>
+        </div>
+
+        <div style="width: 240px; height: 260px; position: relative;">
+          <svg viewBox="0 0 160 200" width="100%" height="100%" style="overflow: visible;">
+            <defs>
+              <radialGradient id="chipHead" cx="30%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="40%" stop-color="#e2e8f0"/>
+                <stop offset="85%" stop-color="#94a3b8"/>
+                <stop offset="100%" stop-color="#475569"/>
+              </radialGradient>
+              <radialGradient id="chipBody" cx="35%" cy="30%" r="75%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="50%" stop-color="#cbd5e1"/>
+                <stop offset="90%" stop-color="#64748b"/>
+                <stop offset="100%" stop-color="#334155"/>
+              </radialGradient>
+              <linearGradient id="chipVisor" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f172a"/>
+                <stop offset="50%" stop-color="#1e293b"/>
+                <stop offset="100%" stop-color="#020617"/>
+              </linearGradient>
+              <radialGradient id="chipCore" cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stop-color="#fecdd3"/>
+                <stop offset="50%" stop-color="#f43f5e"/>
+                <stop offset="100%" stop-color="#881337"/>
+              </radialGradient>
+            </defs>
+
+            <ellipse cx="80" cy="190" rx="42" ry="7" fill="#000" opacity="0.18"/>
+            <rect x="52" y="145" width="16" height="30" rx="8" fill="url(#chipBody)" stroke="#000" stroke-width="2.5"/>
+            <ellipse cx="60" cy="178" rx="14" ry="7" fill="url(#chipHead)" stroke="#000" stroke-width="2.5"/>
+            <rect x="92" y="145" width="16" height="30" rx="8" fill="url(#chipBody)" stroke="#000" stroke-width="2.5"/>
+            <ellipse cx="100" cy="178" rx="14" ry="7" fill="url(#chipHead)" stroke="#000" stroke-width="2.5"/>
+
+            <path d="M 38 95 Q 20 115 30 135" fill="none" stroke="url(#chipBody)" stroke-width="14" stroke-linecap="round"/>
+            <path d="M 38 95 Q 20 115 30 135" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="30" cy="135" r="8" fill="url(#chipHead)" stroke="#000" stroke-width="2"/>
+
+            <rect x="42" y="80" width="76" height="70" rx="20" fill="url(#chipBody)" stroke="#000" stroke-width="3"/>
+            <circle cx="80" cy="112" r="15" fill="url(#chipCore)" stroke="#000" stroke-width="2.5"/>
+            <rect x="70" y="68" width="20" height="14" rx="4" fill="#334155" stroke="#000" stroke-width="2"/>
+
+            <line x1="80" y1="28" x2="80" y2="10" stroke="#000" stroke-width="3"/>
+            <circle cx="80" cy="8" r="6" fill="#f43f5e" stroke="#000" stroke-width="2"/>
+
+            <rect x="44" y="24" width="72" height="48" rx="16" fill="url(#chipHead)" stroke="#000" stroke-width="3"/>
+            <rect x="52" y="32" width="56" height="32" rx="10" fill="url(#chipVisor)" stroke="#000" stroke-width="2"/>
+
+            <path d="M 60 42 L 72 48" stroke="#f43f5e" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 100 42 L 88 48" stroke="#f43f5e" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="66" cy="50" r="4" fill="#f43f5e"/>
+            <circle cx="94" cy="50" r="4" fill="#f43f5e"/>
+
+            <path d="M 122 95 Q 150 95 140 110" fill="none" stroke="url(#chipBody)" stroke-width="12" stroke-linecap="round"/>
+            <path d="M 122 95 Q 150 95 140 110" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+
+            <g transform="translate(115, 75)">
+              <rect x="0" y="0" width="60" height="78" rx="8" fill="#0f172a" stroke="#000" stroke-width="2.5" />
+              <rect x="4" y="4" width="52" height="70" rx="4" fill="#ffffff" stroke="#000" stroke-width="1.5" />
+              
+              <foreignObject x="6" y="6" width="48" height="66">
+                <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff;">
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=microsplit@upi%26pn=MicroSplit%26am=180" style="width: 44px; height: 44px; object-fit: contain;" alt="QR Code" />
+                </div>
+              </foreignObject>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMainTab = 'personal'; 
+    let activePeriod = 'weekly';     
+    let splitMode = 'owed';          
+
+    let caps = JSON.parse(localStorage.getItem('chips_caps')) || {
+      daily: 50,
+      weekly: 200,
+      monthly: 1000
+    };
+
+    let expenses = JSON.parse(localStorage.getItem('chips_expenses')) || [
+      { id: 1, title: 'Pizza Party Share', date: 'today', amount: 150, icon: 'utensils' },
+      { id: 2, title: 'Cutting Chai & Samosa', date: 'today', amount: 40, icon: 'coffee' },
+      { id: 3, title: 'Auto Rickshaw to Campus', date: 'today', amount: 30, icon: 'car' },
+      { id: 4, title: 'Xerox Exam Notes', date: 'yesterday', amount: 120, icon: 'book-open' }
+    ];
+
+    let splits = JSON.parse(localStorage.getItem('chips_splits')) || [
+      { id: 1, friend: 'Aman', desc: 'Pizza Party Share', amount: 180, owesYou: true },
+      { id: 2, friend: 'Riya', desc: 'Movie Tickets', amount: 120, owesYou: false }
+    ];
+
+    const periodTimeWords = {
+      daily: 'DAY',
+      weekly: 'WEEK',
+      monthly: 'MONTH'
+    };
+
+    function saveState() {
+      localStorage.setItem('chips_caps', JSON.stringify(caps));
+      localStorage.setItem('chips_expenses', JSON.stringify(expenses));
+      localStorage.setItem('chips_splits', JSON.stringify(splits));
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerText = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 2000);
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function switchMainTab(tab) {
+      currentMainTab = tab;
+      
+      const personalView = document.getElementById('view-personal');
+      const friendsView = document.getElementById('view-friends');
+      const secretView = document.getElementById('view-secret');
+
+      const tabPersonal = document.getElementById('tab-personal');
+      const tabFriends = document.getElementById('tab-friends');
+      const tabSecret = document.getElementById('tab-secret');
+
+      personalView.style.display = 'none';
+      friendsView.style.display = 'none';
+      secretView.style.display = 'none';
+
+      tabPersonal.className = 'tab-btn inactive';
+      tabFriends.className = 'tab-btn inactive';
+      tabSecret.className = 'tab-btn inactive';
+
+      if (tab === 'personal') {
+        personalView.style.display = 'flex';
+        tabPersonal.className = 'tab-btn active-personal';
+      } else if (tab === 'friends') {
+        friendsView.style.display = 'flex';
+        tabFriends.className = 'tab-btn active-friends';
+      } else if (tab === 'secret') {
+        secretView.style.display = 'flex';
+        tabSecret.className = 'tab-btn active-secret';
+      }
+
+      render();
+    }
+
+    function exportData() {
+      const data = {
+        caps: caps,
+        expenses: expenses,
+        splits: splits,
+        exportDate: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chips_wallet_backup_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('📥 Data exported successfully!');
+      triggerConfetti();
+    }
+
+    function triggerImport() {
+      document.getElementById('import-file-input').click();
+    }
+
+    function handleFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.caps && parsed.expenses && parsed.splits) {
+            caps = parsed.caps;
+            expenses = parsed.expenses;
+            splits = parsed.splits;
+            saveState();
+            render();
+            showToast('📤 Data imported successfully!');
+            triggerConfetti();
+          } else {
+            showToast('❌ Invalid backup JSON format.');
+          }
+        } catch (err) {
+          showToast('❌ Error parsing JSON file.');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function openClearModal() {
+      document.getElementById('clear-modal').style.display = 'flex';
+    }
+
+    function closeClearModal() {
+      document.getElementById('clear-modal').style.display = 'none';
+    }
+
+    function confirmClearAll() {
+      expenses = [];
+      splits = [];
+      caps = { daily: 50, weekly: 200, monthly: 1000 };
+      saveState();
+      render();
+      closeClearModal();
+      showToast('🧹 Data cleared!');
+    }
+
+    function loadDemoData() {
+      caps = { daily: 50, weekly: 200, monthly: 1000 };
+      expenses = [
+        { id: 1, title: 'Pizza Party Share', date: 'today', amount: 150, icon: 'utensils' },
+        { id: 2, title: 'Cutting Chai & Samosa', date: 'today', amount: 40, icon: 'coffee' },
+        { id: 3, title: 'Auto Rickshaw to Campus', date: 'today', amount: 30, icon: 'car' },
+        { id: 4, title: 'Xerox Exam Notes', date: 'yesterday', amount: 120, icon: 'book-open' }
+      ];
+      splits = [
+        { id: 1, friend: 'Aman', desc: 'Pizza Party Share', amount: 180, owesYou: true },
+        { id: 2, friend: 'Riya', desc: 'Movie Tickets', amount: 120, owesYou: false }
+      ];
+      saveState();
+      render();
+      showToast('⚡ Demo data reloaded!');
+      triggerConfetti();
+    }
+
+    function getSpentForPeriod(period) {
+      if (period === 'daily') {
+        return expenses
+          .filter(item => item.date === 'today')
+          .reduce((sum, item) => sum + item.amount, 0);
+      }
+      return expenses.reduce((sum, item) => sum + item.amount, 0);
+    }
+
+    function getSplitTotals() {
+      let toMe = 0;
+      let byMe = 0;
+      splits.forEach(s => {
+        if (s.owesYou) toMe += s.amount;
+        else byMe += s.amount;
+      });
+      return { toMe, byMe, net: toMe - byMe };
+    }
+
+    function setPeriod(period) {
+      activePeriod = period;
+      render();
+    }
+
+    function setSplitMode(mode) {
+      splitMode = mode;
+      const owedBtn = document.getElementById('split-mode-owed');
+      const oweBtn = document.getElementById('split-mode-owe');
+      const submitBtn = document.getElementById('split-submit-btn');
+
+      if (mode === 'owed') {
+        owedBtn.className = 'split-type-btn active-owed-to-me';
+        oweBtn.className = 'split-type-btn';
+        submitBtn.innerHTML = '<i data-lucide="user-plus" style="width:16px; height:16px;"></i> Request Split 🤝';
+        submitBtn.style.background = '#15803d';
+      } else {
+        owedBtn.className = 'split-type-btn';
+        oweBtn.className = 'split-type-btn active-owed-by-me';
+        submitBtn.innerHTML = '<i data-lucide="user-minus" style="width:16px; height:16px;"></i> Log Debt 💸';
+        submitBtn.style.background = '#b91c1c';
+      }
+      lucide.createIcons();
+    }
+
+    function editCurrentCap() {
+      const currentCap = caps[activePeriod];
+      const input = prompt(`Set new ${activePeriod.toUpperCase()} spending cap (₹):`, currentCap);
+      if (input === null) return;
+      const newCap = Number(input);
+
+      if (!isNaN(newCap) && newCap > 0) {
+        caps[activePeriod] = newCap;
+        saveState();
+        render();
+        showToast('🎯 Spending cap updated!');
+      }
+    }
+
+    function handleAddExpense() {
+      const titleInput = document.getElementById('exp-title');
+      const amountInput = document.getElementById('exp-amount');
+      const iconSelect = document.getElementById('exp-icon');
+      
+      const title = titleInput.value.trim();
+      const amount = Number(amountInput.value);
+      const icon = iconSelect.value;
+
+      if (title && !isNaN(amount) && amount > 0) {
+        expenses.unshift({
+          id: Date.now(),
+          title: title,
+          date: 'today',
+          amount: amount,
+          icon: icon
+        });
+        titleInput.value = '';
+        amountInput.value = '';
+        saveState();
+        render();
+
+        const spent = getSpentForPeriod(activePeriod);
+        const cap = caps[activePeriod];
+        if (spent <= cap) {
+          triggerConfetti();
+        }
+        showToast('✨ Expense added!');
+      } else {
+        showToast('⚠ Please enter valid title & amount.');
+      }
+    }
+
+    function deleteExpense(id) {
+      expenses = expenses.filter(e => e.id !== id);
+      saveState();
+      render();
+      showToast('🗑️ Expense removed.');
+    }
+
+    function handleAddSplit() {
+      const friendInput = document.getElementById('split-friend');
+      const descInput = document.getElementById('split-desc');
+      const amountInput = document.getElementById('split-amount');
+
+      const friend = friendInput.value.trim();
+      const desc = descInput.value.trim();
+      const amount = Number(amountInput.value);
+
+      if (friend && desc && !isNaN(amount) && amount > 0) {
+        splits.unshift({
+          id: Date.now(),
+          friend: friend,
+          desc: desc,
+          amount: amount,
+          owesYou: splitMode === 'owed'
+        });
+        friendInput.value = '';
+        descInput.value = '';
+        amountInput.value = '';
+        saveState();
+        render();
+        triggerConfetti();
+        showToast('🤝 Split added!');
+      } else {
+        showToast('⚠️ Please fill in all split fields.');
+      }
+    }
+
+    function settleSplit(id) {
+      splits = splits.filter(s => s.id !== id);
+      saveState();
+      render();
+      triggerConfetti();
+      showToast('💰 Split settled!');
+    }
+
+    function deleteSplit(id) {
+      splits = splits.filter(s => s.id !== id);
+      saveState();
+      render();
+      showToast('🗑️ Split removed.');
+    }
+
+    function render() {
+      ['daily', 'weekly', 'monthly'].forEach(p => {
+        const btn = document.getElementById(`btn-${p}`);
+        if (btn) {
+          btn.className = `period-btn ${activePeriod === p ? 'active' : ''}`;
+        }
+      });
+
+      const capHeading = document.getElementById('cap-heading');
+      if (capHeading) capHeading.innerText = `${activePeriod.toUpperCase()} SPENDING CAP`;
+
+      const spent = getSpentForPeriod(activePeriod);
+      const cap = caps[activePeriod];
+      const percent = Math.round((spent / cap) * 100);
+
+      const capRatio = document.getElementById('cap-ratio');
+      if (capRatio) capRatio.innerText = `₹${spent} / ₹${cap}`;
+
+      const progressBar = document.getElementById('cap-progress-bar');
+      if (progressBar) {
+        progressBar.style.width = `${Math.min(percent, 100)}%`;
+        progressBar.innerText = `${percent}% Budget Used`;
+        if (percent > 100) {
+          progressBar.style.background = '#ff4757';
+        } else if (percent > 80) {
+          progressBar.style.background = '#ffa502';
+        } else {
+          progressBar.style.background = '#2ed573';
+        }
+      }
+
+      const robotStatement = document.getElementById('robot-statement');
+      const periodTag = document.getElementById('period-tag');
+      const robotCore = document.getElementById('robot-core');
+      const robotAntenna = document.getElementById('robot-antenna');
+
+      if (periodTag) periodTag.innerText = `${activePeriod.toUpperCase()} RADAR`;
+
+      if (robotStatement) {
+        if (percent > 100) {
+          robotStatement.innerText = `"DANGER! BUDGET OVERLOAD! NO MORE SPENDING THIS ${periodTimeWords[activePeriod]}!" 🚨`;
+          if (robotCore) robotCore.setAttribute('fill', 'url(#coreOverload)');
+          if (robotAntenna) robotAntenna.setAttribute('fill', '#f43f5e');
+        } else if (percent > 80) {
+          robotStatement.innerText = `"CAUTION! APPROACHING LIMIT! WATCH YOUR WALLET!" ⚠️`;
+          if (robotCore) robotCore.setAttribute('fill', 'url(#coreNormal)');
+          if (robotAntenna) robotAntenna.setAttribute('fill', '#fbbf24');
+        } else {
+          robotStatement.innerText = `"VIBES ARE CLEAN! BUDGET LOOKS HEALTHY SO FAR." ✨`;
+          if (robotCore) robotCore.setAttribute('fill', 'url(#coreNormal)');
+          if (robotAntenna) robotAntenna.setAttribute('fill', '#38bdf8');
+        }
+      }
+
+      const expenseListEl = document.getElementById('expense-list');
+      const expCountEl = document.getElementById('exp-count');
+      if (expCountEl) expCountEl.innerText = `${expenses.length} items`;
+
+      if (expenseListEl) {
+        expenseListEl.innerHTML = '';
+        if (expenses.length === 0) {
+          expenseListEl.innerHTML = `<div style="font-size:12px; color:#666; text-align:center; padding:12px;">No expenses logged yet!</div>`;
+        } else {
+          expenses.forEach(e => {
+            const iconName = e.icon || 'shopping-bag';
+            const item = document.createElement('div');
+            item.className = 'expense-item';
+            item.innerHTML = `
+              <div class="exp-left">
+                <div class="exp-icon"><i data-lucide="${iconName}" style="width:16px; height:16px;"></i></div>
+                <div>
+                  <div class="exp-title">${e.title}</div>
+                  <div class="exp-date">${e.date}</div>
+                </div>
+              </div>
+              <div class="exp-right">
+                <div class="exp-amount">₹${e.amount}</div>
+                <button class="delete-btn" onclick="deleteExpense(${e.id})" title="Delete"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+              </div>
+            `;
+            expenseListEl.appendChild(item);
+          });
+        }
+      }
+
+      const sumToMe = document.getElementById('sum-to-me');
+      const sumByMe = document.getElementById('sum-by-me');
+      const sumNet = document.getElementById('sum-net');
+
+      const totals = getSplitTotals();
+      if (sumToMe) sumToMe.innerText = `+₹${totals.toMe}`;
+      if (sumByMe) sumByMe.innerText = `-₹${totals.byMe}`;
+      if (sumNet) {
+        sumNet.innerText = `${totals.net >= 0 ? '+' : ''}₹${totals.net}`;
+        sumNet.style.color = totals.net >= 0 ? '#15803d' : '#b91c1c';
+      }
+
+      const splitsListEl = document.getElementById('splits-list');
+      if (splitsListEl) {
+        splitsListEl.innerHTML = '';
+        if (splits.length === 0) {
+          splitsListEl.innerHTML = `<div style="font-size:12px; color:#666; text-align:center; padding:12px;">No active splits or debts!</div>`;
+        } else {
+          splits.forEach(s => {
+            const item = document.createElement('div');
+            item.className = 'expense-item';
+            item.innerHTML = `
+              <div class="exp-left">
+                <div class="exp-icon"><i data-lucide="${s.owesYou ? 'arrow-up-right' : 'arrow-down-left'}" style="width:16px; height:16px;"></i></div>
+                <div>
+                  <div class="exp-title">${s.friend} <span style="font-size:10px; font-weight:normal; color:#555;">(${s.desc})</span></div>
+                  <div class="exp-date">${s.owesYou ? 'Owes You' : 'You Owe'}</div>
+                </div>
+              </div>
+              <div class="exp-right">
+                <span class="balance-badge ${s.owesYou ? 'owe-positive' : 'owe-negative'}">${s.owesYou ? '+' : '-'}₹${s.amount}</span>
+                <button class="settle-btn" onclick="settleSplit(${s.id})" title="Settle"><i data-lucide="check" style="width:12px; height:12px;"></i> Settle</button>
+                <button class="delete-btn" onclick="deleteSplit(${s.id})" title="Delete"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+              </div>
+            `;
+            splitsListEl.appendChild(item);
+          });
+        }
+      }
+
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }
+
+    window.onload = function() {
+      render();
+    };
   </script>
 </body>
 </html>

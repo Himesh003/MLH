@@ -27,7 +27,7 @@
 
     .container {
       width: 100%;
-      max-width: 480px; /* Reduced from 700px for a more compact app feel */
+      max-width: 720px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -917,6 +917,16 @@
       monthly: 'MONTH'
     };
 
+    const iconMap = {
+      utensils: '🍕',
+      coffee: '☕',
+      car: '🛺',
+      'book-open': '📄',
+      film: '🎬',
+      zap: '⚡',
+      'shopping-bag': '🛍️'
+    };
+
     function saveState() {
       localStorage.setItem('chips_caps', JSON.stringify(caps));
       localStorage.setItem('chips_expenses', JSON.stringify(expenses));
@@ -951,258 +961,185 @@
       const friendsView = document.getElementById('view-friends');
       const secretView = document.getElementById('view-secret');
 
-      const tabPersonal = document.getElementById('tab-personal');
-      const tabFriends = document.getElementById('tab-friends');
-      const tabSecret = document.getElementById('tab-secret');
+      const btnPersonal = document.getElementById('tab-personal');
+      const btnFriends = document.getElementById('tab-friends');
+      const btnSecret = document.getElementById('tab-secret');
 
-      // Hide all views
-      personalView.style.display = 'none';
-      friendsView.style.display = 'none';
-      secretView.style.display = 'none';
+      personalView.style.display = tab === 'personal' ? 'flex' : 'none';
+      friendsView.style.display = tab === 'friends' ? 'flex' : 'none';
+      secretView.style.display = tab === 'secret' ? 'flex' : 'none';
 
-      // Reset tabs
-      tabPersonal.className = 'tab-btn inactive';
-      tabFriends.className = 'tab-btn inactive';
-      tabSecret.className = 'tab-btn inactive';
-
-      if (tab === 'personal') {
-        personalView.style.display = 'flex';
-        tabPersonal.className = 'tab-btn active-personal';
-        updatePersonalView();
-      } else if (tab === 'friends') {
-        friendsView.style.display = 'flex';
-        tabFriends.className = 'tab-btn active-friends';
-        updateFriendsView();
-      } else if (tab === 'secret') {
-        secretView.style.display = 'flex';
-        tabSecret.className = 'tab-btn active-secret';
-      }
+      btnPersonal.className = 'tab-btn ' + (tab === 'personal' ? 'active-personal' : 'inactive');
+      btnFriends.className = 'tab-btn ' + (tab === 'friends' ? 'active-friends' : 'inactive');
+      btnSecret.className = 'tab-btn ' + (tab === 'secret' ? 'active-secret' : 'inactive');
     }
 
     function setPeriod(period) {
       activePeriod = period;
-      document.getElementById('btn-daily').classList.remove('active');
-      document.getElementById('btn-weekly').classList.remove('active');
-      document.getElementById('btn-monthly').classList.remove('active');
-      document.getElementById('btn-' + period).classList.add('active');
-      updatePersonalView();
+
+      ['daily', 'weekly', 'monthly'].forEach(p => {
+        const btn = document.getElementById(`btn-${p}`);
+        if (btn) btn.classList.toggle('active', p === period);
+      });
+
+      document.getElementById('cap-heading').innerText = `${period.toUpperCase()} SPENDING CAP`;
+      document.getElementById('period-tag').innerText = `${period.toUpperCase()} RADAR`;
+
+      renderAll();
     }
 
     function editCurrentCap() {
-      const newCap = prompt(`Enter your new ${periodTimeWords[activePeriod]} cap (₹):`, caps[activePeriod]);
-      if (newCap && !isNaN(newCap) && Number(newCap) > 0) {
-        caps[activePeriod] = Number(newCap);
-        saveState();
-        updatePersonalView();
-        showToast('Cap successfully updated! ✨');
+      const current = caps[activePeriod] || 0;
+      const input = prompt(`Enter new ${activePeriod} spending cap (₹):`, current);
+      if (input !== null) {
+        const val = parseFloat(input);
+        if (!isNaN(val) && val >= 0) {
+          caps[activePeriod] = val;
+          saveState();
+          renderAll();
+          showToast(`Updated ${activePeriod} cap to ₹${val}`);
+        } else {
+          alert('Please enter a valid positive number.');
+        }
       }
     }
 
     function handleAddExpense() {
-      const title = document.getElementById('exp-title').value;
-      const amount = Number(document.getElementById('exp-amount').value);
-      const icon = document.getElementById('exp-icon').value;
+      const titleInput = document.getElementById('exp-title');
+      const amountInput = document.getElementById('exp-amount');
+      const iconSelect = document.getElementById('exp-icon');
 
-      if (!title || !amount) {
-        showToast('Please enter both title and amount! 🛑');
+      const title = titleInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      const icon = iconSelect.value;
+
+      if (!title || isNaN(amount) || amount <= 0) {
+        showToast('Please enter a valid title and amount!');
         return;
       }
 
       expenses.unshift({
         id: Date.now(),
         title,
+        date: 'today',
         amount,
-        icon,
-        date: new Date().toLocaleDateString()
+        icon
       });
 
-      document.getElementById('exp-title').value = '';
-      document.getElementById('exp-amount').value = '';
+      titleInput.value = '';
+      amountInput.value = '';
 
       saveState();
-      updatePersonalView();
-      showToast('Expense logged! 💸');
+      renderAll();
+      showToast(`Added ₹${amount} for ${title}`);
+      triggerConfetti();
     }
 
     function deleteExpense(id) {
       expenses = expenses.filter(e => e.id !== id);
       saveState();
-      updatePersonalView();
-      showToast('Expense deleted! 🗑️');
-    }
-
-    function updatePersonalView() {
-      const cap = caps[activePeriod];
-      
-      // Calculate total expenses. (In a real app, you would filter by date relative to the activePeriod)
-      const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0); 
-      
-      document.getElementById('cap-heading').innerText = `${periodTimeWords[activePeriod]} SPENDING CAP`;
-      document.getElementById('cap-ratio').innerText = `₹${totalSpent} / ₹${cap}`;
-      
-      const progressPercent = Math.min((totalSpent / cap) * 100, 100);
-      const isOverload = totalSpent > cap;
-      
-      const progressBar = document.getElementById('cap-progress-bar');
-      progressBar.style.width = `${progressPercent}%`;
-      progressBar.innerText = `${Math.round((totalSpent / cap) * 100)}% Budget Used`;
-      
-      const core = document.getElementById('robot-core');
-      const statementEl = document.getElementById('robot-statement');
-
-      if (isOverload) {
-        progressBar.style.background = '#e11d48'; // Red
-        statementEl.innerText = '"DANGER! BUDGET OVERLOAD! NO MORE SPENDING THIS WEEK!" 🚨';
-        if(core) core.setAttribute('fill', 'url(#coreOverload)');
-      } else if (progressPercent > 80) {
-        progressBar.style.background = '#f59e0b'; // Orange
-        statementEl.innerText = '"WOAH THERE! SLOW DOWN ON THE SPENDING!" ⚠️';
-        if(core) core.setAttribute('fill', 'url(#coreOverload)');
-      } else {
-        progressBar.style.background = '#10b981'; // Green
-        statementEl.innerText = '"VIBES ARE CLEAN! BUDGET LOOKS HEALTHY SO FAR." ✨';
-        if(core) core.setAttribute('fill', 'url(#coreNormal)');
-      }
-
-      document.getElementById('period-tag').innerText = `${periodTimeWords[activePeriod]} RADAR`;
-      document.getElementById('exp-count').innerText = `${expenses.length} items`;
-
-      const listEl = document.getElementById('expense-list');
-      listEl.innerHTML = '';
-      
-      if(expenses.length === 0) {
-        listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #666; font-size: 12px; font-weight: bold;">No recent spending. Clean slate!</div>';
-      } else {
-        expenses.forEach(exp => {
-          listEl.innerHTML += `
-            <div class="expense-item">
-              <div class="exp-left">
-                <div class="exp-icon"><i data-lucide="${exp.icon}" style="width:16px; height:16px;"></i></div>
-                <div>
-                  <div class="exp-title">${exp.title}</div>
-                  <div class="exp-date">${exp.date}</div>
-                </div>
-              </div>
-              <div class="exp-right">
-                <div class="exp-amount">₹${exp.amount}</div>
-                <button class="delete-btn" onclick="deleteExpense(${exp.id})">
-                  <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
-                </button>
-              </div>
-            </div>
-          `;
-        });
-      }
-      lucide.createIcons();
+      renderAll();
+      showToast('Expense removed!');
     }
 
     function setSplitMode(mode) {
       splitMode = mode;
-      document.getElementById('split-mode-owed').className = `split-type-btn ${mode === 'owed' ? 'active-owed-to-me' : ''}`;
-      document.getElementById('split-mode-owe').className = `split-type-btn ${mode === 'owe' ? 'active-owed-by-me' : ''}`;
+      const btnOwed = document.getElementById('split-mode-owed');
+      const btnOwe = document.getElementById('split-mode-owe');
+      const submitBtn = document.getElementById('split-submit-btn');
+
+      if (mode === 'owed') {
+        btnOwed.className = 'split-type-btn active-owed-to-me';
+        btnOwe.className = 'split-type-btn';
+        submitBtn.style.background = '#15803d';
+        submitBtn.innerHTML = `<i data-lucide="user-plus" style="width:16px; height:16px;"></i> Request Split 🤝`;
+      } else {
+        btnOwed.className = 'split-type-btn';
+        btnOwe.className = 'split-type-btn active-owed-by-me';
+        submitBtn.style.background = '#b91c1c';
+        submitBtn.innerHTML = `<i data-lucide="user-minus" style="width:16px; height:16px;"></i> Log Debt 🤝`;
+      }
+      lucide.createIcons();
     }
 
     function handleAddSplit() {
-      const friend = document.getElementById('split-friend').value;
-      const desc = document.getElementById('split-desc').value;
-      const amount = Number(document.getElementById('split-amount').value);
+      const friendInput = document.getElementById('split-friend');
+      const descInput = document.getElementById('split-desc');
+      const amountInput = document.getElementById('split-amount');
 
-      if (!friend || !amount) {
-        showToast('Friend name and amount required! 🛑');
+      const friend = friendInput.value.trim();
+      const desc = descInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+
+      if (!friend || !desc || isNaN(amount) || amount <= 0) {
+        showToast('Please fill in friend name, description, and amount!');
         return;
       }
 
       splits.unshift({
         id: Date.now(),
         friend,
-        desc: desc || 'Split',
+        desc,
         amount,
         owesYou: splitMode === 'owed'
       });
 
-      document.getElementById('split-friend').value = '';
-      document.getElementById('split-desc').value = '';
-      document.getElementById('split-amount').value = '';
+      friendInput.value = '';
+      descInput.value = '';
+      amountInput.value = '';
 
       saveState();
-      updateFriendsView();
-      showToast('Split added! 🤝');
+      renderAll();
+      showToast(`Split recorded for ${friend}!`);
+      triggerConfetti();
+    }
+
+    function settleSplit(id) {
+      splits = splits.filter(s => s.id !== id);
+      saveState();
+      renderAll();
+      showToast('Split settled! 🎉');
     }
 
     function deleteSplit(id) {
       splits = splits.filter(s => s.id !== id);
       saveState();
-      updateFriendsView();
-      showToast('Split removed! 🗑️');
+      renderAll();
+      showToast('Split deleted');
     }
 
-    function settleSplit(id) {
-      deleteSplit(id);
-      triggerConfetti();
-      showToast('Debt Settled! 🎉');
+    function openClearModal() {
+      document.getElementById('clear-modal').style.display = 'flex';
     }
 
-    function updateFriendsView() {
-      let owedToMe = 0;
-      let owedByMe = 0;
-
-      const listEl = document.getElementById('splits-list');
-      listEl.innerHTML = '';
-
-      if(splits.length === 0) {
-        listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #666; font-size: 12px; font-weight: bold;">No active splits!</div>';
-      } else {
-        splits.forEach(s => {
-          if (s.owesYou) owedToMe += s.amount;
-          else owedByMe += s.amount;
-
-          const badgeClass = s.owesYou ? 'owe-positive' : 'owe-negative';
-          const badgeText = s.owesYou ? 'Owes You' : 'You Owe';
-
-          listEl.innerHTML += `
-            <div class="expense-item">
-              <div class="exp-left">
-                <div class="exp-icon"><i data-lucide="user" style="width:16px; height:16px;"></i></div>
-                <div>
-                  <div class="exp-title">${s.friend}</div>
-                  <div class="exp-date">${s.desc}</div>
-                </div>
-              </div>
-              <div class="exp-right">
-                <div style="text-align: right;">
-                  <div class="exp-amount">₹${s.amount}</div>
-                  <div class="balance-badge ${badgeClass}">${badgeText}</div>
-                </div>
-                <button class="settle-btn" onclick="settleSplit(${s.id})" title="Settle Up">
-                  <i data-lucide="check-circle" style="width:14px; height:14px;"></i>
-                </button>
-              </div>
-            </div>
-          `;
-        });
-      }
-
-      document.getElementById('sum-to-me').innerText = `+₹${owedToMe}`;
-      document.getElementById('sum-by-me').innerText = `-₹${owedByMe}`;
-      
-      const net = owedToMe - owedByMe;
-      const netEl = document.getElementById('sum-net');
-      netEl.innerText = `${net >= 0 ? '+' : '-'}₹${Math.abs(net)}`;
-      netEl.style.color = net >= 0 ? '#15803d' : '#b91c1c';
-
-      lucide.createIcons();
+    function closeClearModal() {
+      document.getElementById('clear-modal').style.display = 'none';
     }
 
-    // Action Tools
+    function confirmClearAll() {
+      localStorage.removeItem('chips_caps');
+      localStorage.removeItem('chips_expenses');
+      localStorage.removeItem('chips_splits');
+
+      caps = { daily: 50, weekly: 200, monthly: 1000 };
+      expenses = [];
+      splits = [];
+
+      saveState();
+      closeClearModal();
+      renderAll();
+      showToast('All data wiped clean!');
+    }
+
     function exportData() {
-      const data = { caps, expenses, splits };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'chips_vibe_wallet_backup.json';
-      a.click();
-      showToast('Data Exported! 💾');
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ caps, expenses, splits }, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "chips_wallet_data.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Data exported as JSON!');
     }
 
     function triggerImport() {
@@ -1212,24 +1149,23 @@
     function handleFileImport(event) {
       const file = event.target.files[0];
       if (!file) return;
-      
+
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = function(e) {
         try {
-          const data = JSON.parse(e.target.result);
-          if (data.caps) caps = data.caps;
-          if (data.expenses) expenses = data.expenses;
-          if (data.splits) splits = data.splits;
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.caps) caps = parsed.caps;
+          if (Array.isArray(parsed.expenses)) expenses = parsed.expenses;
+          if (Array.isArray(parsed.splits)) splits = parsed.splits;
+
           saveState();
-          updatePersonalView();
-          updateFriendsView();
-          showToast('Data Imported! 📥');
+          renderAll();
+          showToast('Data imported successfully!');
         } catch (err) {
-          showToast('Invalid JSON file! 🛑');
+          alert('Invalid JSON file format.');
         }
       };
       reader.readAsText(file);
-      event.target.value = ''; 
     }
 
     function loadDemoData() {
@@ -1244,36 +1180,155 @@
         { id: 1, friend: 'Aman', desc: 'Pizza Party Share', amount: 180, owesYou: true },
         { id: 2, friend: 'Riya', desc: 'Movie Tickets', amount: 120, owesYou: false }
       ];
+
       saveState();
-      updatePersonalView();
-      updateFriendsView();
-      showToast('Demo Data Loaded! 🔄');
+      renderAll();
+      showToast('Demo data reloaded!');
     }
 
-    function openClearModal() {
-      document.getElementById('clear-modal').style.display = 'flex';
+    function updateCapUI() {
+      const totalSpent = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const cap = caps[activePeriod] || 200;
+
+      document.getElementById('cap-ratio').innerText = `₹${totalSpent} / ₹${cap}`;
+
+      const pct = cap > 0 ? Math.min(100, Math.round((totalSpent / cap) * 100)) : 0;
+      const progressBar = document.getElementById('cap-progress-bar');
+      progressBar.style.width = `${pct}%`;
+      progressBar.innerText = `${pct}% Budget Used`;
+
+      if (pct > 90) {
+        progressBar.style.background = '#dc2626';
+      } else if (pct > 60) {
+        progressBar.style.background = '#f59e0b';
+      } else {
+        progressBar.style.background = '#16a34a';
+      }
+
+      updateRobotRadar(totalSpent, cap, pct);
     }
 
-    function closeClearModal() {
-      document.getElementById('clear-modal').style.display = 'none';
+    function updateRobotRadar(spent, cap, pct) {
+      const statementEl = document.getElementById('robot-statement');
+      const coreEl = document.getElementById('robot-core');
+      const antennaEl = document.getElementById('robot-antenna');
+
+      if (!statementEl || !coreEl || !antennaEl) return;
+
+      if (spent > cap) {
+        statementEl.innerText = `"BUDGET OVERLOAD! WE ARE IN THE RED!" 🚨`;
+        coreEl.setAttribute('fill', 'url(#coreOverload)');
+        antennaEl.setAttribute('fill', '#f43f5e');
+      } else if (pct >= 75) {
+        statementEl.innerText = `"WATCH IT! SPENDING IS HEATING UP!" 🔥`;
+        coreEl.setAttribute('fill', 'url(#coreOverload)');
+        antennaEl.setAttribute('fill', '#f59e0b');
+      } else {
+        statementEl.innerText = `"VIBES ARE CLEAN! BUDGET LOOKS HEALTHY SO FAR." ✨`;
+        coreEl.setAttribute('fill', 'url(#coreNormal)');
+        antennaEl.setAttribute('fill', '#38bdf8');
+      }
     }
 
-    function confirmClearAll() {
-      caps = { daily: 100, weekly: 500, monthly: 2000 };
-      expenses = [];
-      splits = [];
-      saveState();
-      updatePersonalView();
-      updateFriendsView();
-      closeClearModal();
-      showToast('All Data Cleared! 🧹');
+    function renderExpenses() {
+      const container = document.getElementById('expense-list');
+      const countEl = document.getElementById('exp-count');
+
+      countEl.innerText = `${expenses.length} item${expenses.length === 1 ? '' : 's'}`;
+
+      if (expenses.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666; font-size: 13px; font-weight:700;">No recent spending. Clean slate!</div>`;
+        return;
+      }
+
+      container.innerHTML = expenses.map(item => `
+        <div class="expense-item">
+          <div class="exp-left">
+            <div class="exp-icon">${iconMap[item.icon] || '💸'}</div>
+            <div>
+              <div class="exp-title">${escapeHtml(item.title)}</div>
+              <div class="exp-date">${item.date || 'today'}</div>
+            </div>
+          </div>
+          <div class="exp-right">
+            <span class="exp-amount">₹${item.amount}</span>
+            <button class="delete-btn" onclick="deleteExpense(${item.id})" title="Delete">
+              <i data-lucide="trash-2" style="width:12px; height:12px;"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
     }
 
-    // Initialization
-    window.onload = () => {
+    function renderSplits() {
+      const container = document.getElementById('splits-list');
+      const sumToMeEl = document.getElementById('sum-to-me');
+      const sumByMeEl = document.getElementById('sum-by-me');
+      const sumNetEl = document.getElementById('sum-net');
+
+      const owedToMe = splits.filter(s => s.owesYou).reduce((sum, s) => sum + Number(s.amount), 0);
+      const owedByMe = splits.filter(s => !s.owesYou).reduce((sum, s) => sum + Number(s.amount), 0);
+      const net = owedToMe - owedByMe;
+
+      sumToMeEl.innerText = `+₹${owedToMe}`;
+      sumByMeEl.innerText = `-₹${owedByMe}`;
+      
+      if (net > 0) {
+        sumNetEl.innerText = `+₹${net}`;
+        sumNetEl.style.color = '#15803d';
+      } else if (net < 0) {
+        sumNetEl.innerText = `-₹${Math.abs(net)}`;
+        sumNetEl.style.color = '#b91c1c';
+      } else {
+        sumNetEl.innerText = `₹0`;
+        sumNetEl.style.color = '#000';
+      }
+
+      if (splits.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666; font-size: 13px; font-weight:700;">No splits logged yet!</div>`;
+        return;
+      }
+
+      container.innerHTML = splits.map(item => `
+        <div class="expense-item">
+          <div class="exp-left">
+            <div class="exp-icon" style="background:${item.owesYou ? '#bbf7d0' : '#fecaca'}">
+              ${item.owesYou ? '🤝' : '💸'}
+            </div>
+            <div>
+              <div class="exp-title">${escapeHtml(item.friend)} — <span style="font-weight:600; color:#444;">${escapeHtml(item.desc)}</span></div>
+              <div class="exp-date">${item.owesYou ? 'Owes you' : 'You owe'}</div>
+            </div>
+          </div>
+          <div class="exp-right">
+            <span class="balance-badge ${item.owesYou ? 'owe-positive' : 'owe-negative'}">
+              ${item.owesYou ? '+' : '-'}₹${item.amount}
+            </span>
+            <button class="settle-btn" onclick="settleSplit(${item.id})" title="Settle Balance">Settle</button>
+            <button class="delete-btn" onclick="deleteSplit(${item.id})" title="Delete">
+              <i data-lucide="trash-2" style="width:12px; height:12px;"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function renderAll() {
+      updateCapUI();
+      renderExpenses();
+      renderSplits();
       lucide.createIcons();
-      switchMainTab('personal');
-    };
+    }
+
+    // Initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      setPeriod(activePeriod);
+      renderAll();
+    });
   </script>
 </body>
 </html>
